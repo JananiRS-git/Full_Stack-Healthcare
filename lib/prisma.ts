@@ -1,18 +1,25 @@
 import "dotenv/config";
-import { PrismaClient } from "@prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 
-const globalForPrisma = global as unknown as { prisma: PrismaClient };
+let prisma: any;
 
-const sqliteAdapter = new PrismaBetterSqlite3({
-  url: process.env.DATABASE_URL ?? "file:./dev.db",
-});
-
-export const prisma =
-  globalForPrisma.prisma ||
-  new PrismaClient({
+if (process.env.NODE_ENV === "production") {
+  prisma = new (require("@prisma/client").PrismaClient)({
     log: ["query"],
-    adapter: sqliteAdapter,
+    adapter: new (require("@prisma/adapter-better-sqlite3").PrismaBetterSqlite3)({
+      url: process.env.DATABASE_URL ?? "file:./dev.db",
+    }),
   });
+} else {
+  const globalForPrisma = global as any;
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = new (require("@prisma/client").PrismaClient)({
+      log: ["query"],
+      adapter: new (require("@prisma/adapter-better-sqlite3").PrismaBetterSqlite3)({
+        url: process.env.DATABASE_URL ?? "file:./dev.db",
+      }),
+    });
+  }
+  prisma = globalForPrisma.prisma;
+}
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+export { prisma };
