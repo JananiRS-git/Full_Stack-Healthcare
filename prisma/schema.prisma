@@ -1,0 +1,35 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Patient {
+  id                  Int     @id @default(autoincrement())
+  name                String
+  age                 Int
+  bloodGroup          String
+  weight              Float
+  bloodPressure       String
+  phone               String?
+  status              String  @default("Pending") // 'Pending' | 'Completed'
+  doctorId            Int?
+  doctorName          String?
+  consultationStatus  String? // 'in_progress' | 'verifying_end' | null
+  token               Int?
+  consultationStartedAt String?
+  bookingDate         String?
+  bookingTime         String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([status])
+  @@index([doctorId])
+}

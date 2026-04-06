@@ -26,4 +26,53 @@ export interface Patient {
   bookingTime?: string;
 }
 
-export const patients: Patient[] = [];
+export type NewPatient = Omit<Patient, 'id' | 'createdAt' | 'updatedAt'> & {
+  status?: 'Pending' | 'Completed';
+};
+
+const API_BASE = "/api/patients";
+
+async function handleResponse<T>(res: Response): Promise<T> {
+  if (!res.ok) {
+    const payload = await res.text();
+    throw new Error(`API error (${res.status}): ${payload}`);
+  }
+  return res.json();
+}
+
+export async function getPatients(): Promise<Patient[]> {
+  const res = await fetch(API_BASE, { cache: 'no-store' });
+  return handleResponse<Patient[]>(res);
+}
+
+export async function createPatient(patient: NewPatient): Promise<Patient> {
+  const res = await fetch(API_BASE, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(patient),
+  });
+  const payload = await handleResponse<{ message: string; data: Patient }>(res);
+  return payload.data;
+}
+
+export async function updatePatient(patientId: number, patient: Partial<Patient>): Promise<Patient> {
+  const res = await fetch(`${API_BASE}/${patientId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(patient),
+  });
+  const payload = await handleResponse<{ message: string; data: Patient }>(res);
+  return payload.data;
+}
+
+export async function deletePatient(patientId: number): Promise<void> {
+  const res = await fetch(`${API_BASE}/${patientId}`, {
+    method: 'DELETE',
+  });
+  await handleResponse<{ message: string; data: Patient }>(res);
+}
+

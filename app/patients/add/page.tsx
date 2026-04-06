@@ -17,9 +17,9 @@ export default function AddPatientPage() {
   const [status, setStatus] = useState<'Pending' | 'Completed'>('Pending');
   const [doctorId, setDoctorId] = useState<number | undefined>();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    addPatient({
+    await addPatient({
       id: Date.now(),
       name,
       age,

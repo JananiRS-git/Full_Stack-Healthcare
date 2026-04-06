@@ -37,7 +37,7 @@ export default function PatientsContent() {
     });
   })();
 
-  const handleAddPatient = () => {
+  const handleAddPatient = async () => {
     setPhoneError('');
     
     if (newPatient.phone && !isValidPhoneNumber(newPatient.phone)) {
@@ -46,7 +46,7 @@ export default function PatientsContent() {
     }
     
     if (newPatient.name && newPatient.age && newPatient.bloodGroup && newPatient.weight && newPatient.bloodPressure && newPatient.phone) {
-      addPatient({
+      await addPatient({
         id: Date.now(),
         name: newPatient.name,
         age: newPatient.age,
