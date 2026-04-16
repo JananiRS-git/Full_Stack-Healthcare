@@ -43,34 +43,7 @@ export const users: User[] = [
     role: 'Doctor',
   },
   // Patient accounts
-  {
-    id: 101,
-    email: 'naveen@patient.com',
-    password: 'patient123',
-    name: 'Naveen',
-    role: 'Patient',
-  },
-  {
-    id: 102,
-    email: 'prasad@patient.com',
-    password: 'patient123',
-    name: 'Prasad',
-    role: 'Patient',
-  },
-  {
-    id: 103,
-    email: 'bharath@patient.com',
-    password: 'patient123',
-    name: 'Bharath',
-    role: 'Patient',
-  },
-  {
-    id: 104,
-    email: 'padmavathi@patient.com',
-    password: 'patient123',
-    name: 'Padmavathi',
-    role: 'Patient',
-  },
+  // Patient accounts are validated against registered patient records in the system.
 ];
 
 export interface LoginRecord {

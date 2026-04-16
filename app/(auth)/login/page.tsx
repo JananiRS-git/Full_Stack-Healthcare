@@ -72,7 +72,7 @@ export default function LoginPage() {
           type={role === 'Patient' ? 'text' : 'email'}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder={role === 'Patient' ? 'Patient name (e.g. naveen)' : 'Email'}
+          placeholder={role === 'Patient' ? 'Patient name' : 'Email'}
           required
         />
         <FormInput
@@ -97,7 +97,7 @@ export default function LoginPage() {
         <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Demo Credentials:</p>
         <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
           <p><strong>Patient:</strong> Any registered patient name / patient123</p>
-          <p><strong>Example:</strong> naveen / patient123</p>
+          <p><strong>Example:</strong> patient_name / patient123</p>
           <p><strong>Doctor:</strong> yamuna@hospital.com / doctor123</p>
           <p><strong>Staff:</strong> staff@hospital.com / staff123</p>
           <p className="mt-2 text-gray-500 italic text-xs">Enter the exact name of a registered patient to access the patient portal</p>

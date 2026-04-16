@@ -24,6 +24,7 @@ export default function PatientsContent() {
     status: 'Pending',
   });
   const [phoneError, setPhoneError] = useState<string>('');
+  const [formError, setFormError] = useState<string>('');
 
   const filteredPatients = (() => {
     const result = statusFilter === 'All' 
@@ -41,6 +42,7 @@ export default function PatientsContent() {
   })();
 
   const handleAddPatient = async () => {
+    setFormError('');
     setPhoneError('');
     
     if (newPatient.phone && !isValidPhoneNumber(newPatient.phone)) {
@@ -49,7 +51,7 @@ export default function PatientsContent() {
     }
     
     if (newPatient.name && newPatient.age && newPatient.bloodGroup && newPatient.weight && newPatient.bloodPressure && newPatient.phone) {
-      await addPatient({
+      const created = await addPatient({
         id: Date.now(),
         name: newPatient.name,
         age: newPatient.age,
@@ -62,17 +64,24 @@ export default function PatientsContent() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });
-      setAddModalOpen(false);
-      setNewPatient({
-        name: '',
-        age: undefined,
-        bloodGroup: 'A+',
-        weight: undefined,
-        bloodPressure: '',
-        phone: '',
-        status: 'Pending',
-      });
-      setPhoneError('');
+
+      if (created) {
+        setAddModalOpen(false);
+        setNewPatient({
+          name: '',
+          age: undefined,
+          bloodGroup: 'A+',
+          weight: undefined,
+          bloodPressure: '',
+          phone: '',
+          status: 'Pending',
+        });
+        setPhoneError('');
+      } else {
+        setFormError('Unable to add patient. Please try again.');
+      }
+    } else {
+      setFormError('Please fill all fields correctly before adding the patient.');
     }
   };
 
@@ -315,11 +324,13 @@ export default function PatientsContent() {
                 onChange={(e) => {
                   setNewPatient({ ...newPatient, phone: e.target.value });
                   setPhoneError('');
+                  setFormError('');
                 }}
                 required
                 placeholder="e.g. 9876543210"
               />
               {phoneError && <p className="text-red-600 dark:text-red-400 text-sm mt-1">{phoneError}</p>}
+              {formError && !phoneError && <p className="text-red-600 dark:text-red-400 text-sm mt-1">{formError}</p>}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Assign Doctor (Optional)</label>

@@ -9,18 +9,16 @@ export function formatDate(timestamp?: string): string {
   const d = new Date(timestamp);
   if (isNaN(d.getTime())) return '-';
 
-  const pad = (n: number) => n.toString().padStart(2, '0');
-  const month = d.getMonth() + 1;
-  const day = d.getDate();
-  const year = d.getFullYear();
-  let hours = d.getHours();
-  const minutes = pad(d.getMinutes());
-  const seconds = pad(d.getSeconds());
-  const ampm = hours < 12 ? 'AM' : 'PM';
-  hours = hours % 12;
-  if (hours === 0) hours = 12;
-
-  return `${month}/${day}/${year}, ${hours}:${minutes}:${seconds} ${ampm}`;
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: true,
+  }).format(d);
 }
 
 /**

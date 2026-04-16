@@ -21,7 +21,7 @@ interface DataContextProps {
   addDoctor: (doctor: Doctor) => void;
   updateDoctor: (doctor: Doctor) => void;
   deleteDoctor: (doctorId: number) => void;
-  addPatient: (patient: Patient) => Promise<void>;
+  addPatient: (patient: Patient) => Promise<Patient | null>;
   assignPatientToDoctor: (patientId: number, doctorId: number, bookingDate?: string, bookingTime?: string) => Promise<void>;
   beginConsultation: (patientId: number) => Promise<void>;
   endConsultation: (patientId: number) => Promise<void>;
@@ -312,8 +312,10 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           )
         );
       }
+      return created;
     } catch (error) {
       console.error('Error adding patient:', error);
+      return null;
     }
   };
 

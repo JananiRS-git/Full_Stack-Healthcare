@@ -30,7 +30,15 @@ export async function GET() {
     return Response.json(patients);
   } catch (error) {
     console.error('Error fetching patients:', error);
-    return Response.json({ error: 'Failed to fetch patients' }, { status: 500 });
+    return Response.json(
+      {
+        error:
+          process.env.NODE_ENV === 'production'
+            ? 'Failed to fetch patients'
+            : `Failed to fetch patients: ${String(error)}`,
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -57,9 +65,17 @@ export async function POST(req: Request) {
       },
     });
 
-    return Response.json({ message: "Patient added", data: newPatient });
+    return Response.json({ message: 'Patient added', data: newPatient });
   } catch (error) {
     console.error('Error creating patient:', error);
-    return Response.json({ error: 'Failed to create patient' }, { status: 500 });
+    return Response.json(
+      {
+        error:
+          process.env.NODE_ENV === 'production'
+            ? 'Failed to create patient'
+            : `Failed to create patient: ${String(error)}`,
+      },
+      { status: 500 }
+    );
   }
 }

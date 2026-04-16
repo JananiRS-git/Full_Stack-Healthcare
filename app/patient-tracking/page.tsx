@@ -333,7 +333,12 @@ export default function PatientTrackingPage() {
                   <div className="space-y-3">
                     {doctorPatients.map((patient) => {
                       const isTokenTwo = patient.token === 2;
-                      const arrivalTime = new Date(patient.createdAt || '').toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+                      const arrivalTime = new Date(patient.createdAt || '').toLocaleTimeString('en-IN', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true,
+                        timeZone: 'Asia/Kolkata',
+                      });
                       
                       return (
                         <div
