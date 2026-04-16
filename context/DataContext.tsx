@@ -125,6 +125,76 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     loadPatients();
   }, []);
 
+  const parseBookingTime = (bookingTime?: string) => {
+    if (!bookingTime) return null;
+    const match = bookingTime.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (!match) return null;
+
+    let hours = Number(match[1]);
+    const minutes = Number(match[2]);
+    const period = match[3].toUpperCase();
+
+    if (hours === 12) {
+      hours = period === 'AM' ? 0 : 12;
+    } else if (period === 'PM') {
+      hours += 12;
+    }
+
+    return { hours, minutes };
+  };
+
+  const getAppointmentTimestamp = (bookingDate?: string, bookingTime?: string) => {
+    if (!bookingDate) return null;
+    const date = new Date(bookingDate);
+    if (Number.isNaN(date.getTime())) return null;
+
+    const parsedTime = parseBookingTime(bookingTime ?? '');
+    if (parsedTime) {
+      date.setHours(parsedTime.hours, parsedTime.minutes, 0, 0);
+    } else {
+      date.setHours(23, 59, 59, 999);
+    }
+
+    return date.getTime();
+  };
+
+  const compareAppointments = (a: Patient, b: Patient) => {
+    const aTs = getAppointmentTimestamp(a.bookingDate, a.bookingTime);
+    const bTs = getAppointmentTimestamp(b.bookingDate, b.bookingTime);
+
+    if (aTs == null && bTs == null) return 0;
+    if (aTs == null) return 1;
+    if (bTs == null) return -1;
+    if (aTs !== bTs) return aTs - bTs;
+
+    const aCreated = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const bCreated = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return aCreated - bCreated;
+  };
+
+  const reorderDoctorQueue = (doctorId: number, updatedPatient?: Patient) => {
+    const queuePatients = patients
+      .filter(
+        (p) =>
+          p.doctorId === doctorId &&
+          (p.status === 'Pending' || p.consultationStatus === 'in_progress' || p.consultationStatus === 'verifying_end')
+      )
+      .map((p) => ({ ...p }));
+
+    if (updatedPatient) {
+      const existingIndex = queuePatients.findIndex((p) => p.id === updatedPatient.id);
+      if (existingIndex >= 0) {
+        queuePatients[existingIndex] = { ...updatedPatient };
+      } else {
+        queuePatients.push({ ...updatedPatient });
+      }
+    }
+
+    return queuePatients
+      .sort(compareAppointments)
+      .map((p, index) => ({ ...p, token: index + 1 }));
+  };
+
   const addDoctor = (doctor: Doctor) => {
     const now = new Date().toISOString();
     setDoctors((prev) => [...prev, { ...doctor, createdAt: now, updatedAt: now }]);
@@ -233,16 +303,8 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const doctor = doctors.find((d) => d.id === doctorId);
     const doctorName = doctor?.name || 'Unknown Doctor';
 
-    const existingTokens = patients
-      .filter(
-        (p) =>
-          p.doctorId === doctorId &&
-          p.id !== patientId &&
-          (p.status === 'Pending' || p.consultationStatus === 'in_progress' || p.consultationStatus === 'verifying_end')
-      )
-      .map((p) => p.token)
-      .filter((token): token is number => typeof token === 'number');
-    const tokenNumber = existingTokens.length > 0 ? Math.max(...existingTokens) + 1 : 1;
+    const updatedBookingDate = bookingDate ?? patient.bookingDate;
+    const updatedBookingTime = bookingTime ?? patient.bookingTime;
 
     const updatedPatient: Patient = {
       ...patient,
@@ -250,13 +312,26 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       doctorName,
       status: 'Pending',
       consultationStatus: null,
-      token: tokenNumber,
-      bookingDate: bookingDate ?? patient.bookingDate,
-      bookingTime: bookingTime ?? patient.bookingTime,
+      bookingDate: updatedBookingDate,
+      bookingTime: updatedBookingTime,
       updatedAt: new Date().toISOString(),
     };
 
-    await savePatient(updatedPatient);
+    const updatedQueue = reorderDoctorQueue(doctorId, updatedPatient);
+    const queueMap = new Map(updatedQueue.map((p) => [p.id, p]));
+
+    setPatients((prev) =>
+      prev.map((p) => queueMap.get(p.id) ?? p)
+    );
+
+    await Promise.all(
+      updatedQueue.map(async (queuePatient) => {
+        const existing = patients.find((p) => p.id === queuePatient.id);
+        if (!existing || existing.token !== queuePatient.token || existing.bookingDate !== queuePatient.bookingDate || existing.bookingTime !== queuePatient.bookingTime) {
+          await savePatient(queuePatient);
+        }
+      })
+    );
 
     setDoctors((prev) =>
       prev.map((d) =>

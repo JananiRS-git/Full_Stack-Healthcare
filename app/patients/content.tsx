@@ -29,10 +29,13 @@ export default function PatientsContent() {
     let result = statusFilter === 'All' 
       ? patients 
       : patients.filter((p) => p.status === statusFilter);
-    // Sort: Pending first, then Completed
+    // Sort: Pending first, then Completed; within pending, sort by token order.
     return result.sort((a, b) => {
       if (a.status === 'Pending' && b.status !== 'Pending') return -1;
       if (a.status !== 'Pending' && b.status === 'Pending') return 1;
+      if (a.token != null && b.token != null) return a.token - b.token;
+      if (a.token != null) return -1;
+      if (b.token != null) return 1;
       return 0;
     });
   })();
