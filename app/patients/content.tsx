@@ -26,8 +26,8 @@ export default function PatientsContent() {
   const [phoneError, setPhoneError] = useState<string>('');
 
   const filteredPatients = (() => {
-    let result = statusFilter === 'All' 
-      ? patients 
+    const result = statusFilter === 'All' 
+      ? [...patients] 
       : patients.filter((p) => p.status === statusFilter);
     // Sort: Pending first, then Completed; within pending, sort by token order.
     return result.sort((a, b) => {

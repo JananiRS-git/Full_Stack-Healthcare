@@ -42,24 +42,30 @@ const DataContext = createContext<DataContextProps | undefined>(undefined);
 export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   // load from localStorage if available, otherwise fall back to initial data
   const [doctors, setDoctors] = useState<Doctor[]>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('doctors');
-      if (stored) {
-        try {
-          return JSON.parse(stored);
-        } catch {
-          // If parse fails, fall back to initial data
-        }
-      }
-    }
-    // assign timestamps to initial records
     const initialData = initialDoctors.map((d) => ({
       ...d,
       createdAt: d.createdAt || new Date().toISOString(),
       updatedAt: d.updatedAt || new Date().toISOString(),
     }));
-    // Save immediately to localStorage so it persists
+
     if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('doctors');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (
+            Array.isArray(parsed) &&
+            parsed.length === initialData.length &&
+            parsed.every((doc: Doctor) =>
+              initialData.some((initial) => initial.id === doc.id && initial.name === doc.name)
+            )
+          ) {
+            return parsed;
+          }
+        } catch {
+          // If parse fails, fall back to initial data
+        }
+      }
       localStorage.setItem('doctors', JSON.stringify(initialData));
     }
     return initialData;
