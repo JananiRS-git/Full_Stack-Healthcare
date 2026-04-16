@@ -31,48 +31,127 @@ export type NewPatient = Omit<Patient, 'id' | 'createdAt' | 'updatedAt'> & {
 };
 
 const API_BASE = "/api/patients";
+const LOCAL_STORAGE_PATIENTS_KEY = 'patients';
+
+const isLocalStorageAvailable = () => typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+
+const readLocalPatients = (): Patient[] => {
+  if (!isLocalStorageAvailable()) return [];
+  const stored = localStorage.getItem(LOCAL_STORAGE_PATIENTS_KEY);
+  if (!stored) return [];
+  try {
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveLocalPatients = (patients: Patient[]) => {
+  if (!isLocalStorageAvailable()) return;
+  localStorage.setItem(LOCAL_STORAGE_PATIENTS_KEY, JSON.stringify(patients));
+};
 
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    const payload = await res.text();
+    const contentType = res.headers.get('content-type') || '';
+    let payload: string;
+
+    if (contentType.includes('application/json')) {
+      const json = await res.json();
+      payload = typeof json === 'string' ? json : JSON.stringify(json);
+    } else {
+      payload = await res.text();
+    }
+
     throw new Error(`API error (${res.status}): ${payload}`);
   }
   return res.json();
 }
 
 export async function getPatients(): Promise<Patient[]> {
-  const res = await fetch(API_BASE, { cache: 'no-store' });
-  return handleResponse<Patient[]>(res);
+  try {
+    const res = await fetch(API_BASE, { cache: 'no-store' });
+    return handleResponse<Patient[]>(res);
+  } catch (error) {
+    console.warn('API not available for patients, falling back to localStorage:', error);
+    return readLocalPatients();
+  }
 }
 
 export async function createPatient(patient: NewPatient): Promise<Patient> {
-  const res = await fetch(API_BASE, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(patient),
-  });
-  const payload = await handleResponse<{ message: string; data: Patient }>(res);
-  return payload.data;
+  try {
+    const res = await fetch(API_BASE, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(patient),
+    });
+    const payload = await handleResponse<{ message: string; data: Patient }>(res);
+    return payload.data;
+  } catch (error) {
+    console.warn('API not available for creating patient, falling back to localStorage:', error);
+
+    const now = new Date().toISOString();
+    const created: Patient = {
+      id: Date.now(),
+      name: patient.name,
+      age: patient.age,
+      bloodGroup: patient.bloodGroup,
+      weight: patient.weight,
+      bloodPressure: patient.bloodPressure,
+      phone: patient.phone,
+      status: patient.status || 'Pending',
+      doctorId: patient.doctorId,
+      doctorName: patient.doctorName,
+      consultationStatus: patient.consultationStatus ?? null,
+      token: patient.token ?? null,
+      consultationStartedAt: patient.consultationStartedAt ?? null,
+      bookingDate: patient.bookingDate,
+      bookingTime: patient.bookingTime,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const existing = readLocalPatients();
+    saveLocalPatients([created, ...existing]);
+    return created;
+  }
 }
 
 export async function updatePatient(patientId: number, patient: Partial<Patient>): Promise<Patient> {
-  const res = await fetch(`${API_BASE}/${patientId}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(patient),
-  });
-  const payload = await handleResponse<{ message: string; data: Patient }>(res);
-  return payload.data;
+  try {
+    const res = await fetch(`${API_BASE}/${patientId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(patient),
+    });
+    const payload = await handleResponse<{ message: string; data: Patient }>(res);
+    return payload.data;
+  } catch (error) {
+    console.warn('API not available for updating patient, falling back to localStorage:', error);
+    const stored = readLocalPatients();
+    const updated = stored.map((item) => (item.id === patientId ? { ...item, ...patient, updatedAt: new Date().toISOString() } : item));
+    saveLocalPatients(updated);
+    const found = updated.find((item) => item.id === patientId);
+    if (!found) throw new Error('Patient not found in local store');
+    return found;
+  }
 }
 
 export async function deletePatient(patientId: number): Promise<void> {
-  const res = await fetch(`${API_BASE}/${patientId}`, {
-    method: 'DELETE',
-  });
-  await handleResponse<{ message: string; data: Patient }>(res);
+  try {
+    const res = await fetch(`${API_BASE}/${patientId}`, {
+      method: 'DELETE',
+    });
+    await handleResponse<{ message: string; data: Patient }>(res);
+  } catch (error) {
+    console.warn('API not available for deleting patient, falling back to localStorage:', error);
+    const stored = readLocalPatients();
+    saveLocalPatients(stored.filter((item) => item.id !== patientId));
+  }
 }
 
