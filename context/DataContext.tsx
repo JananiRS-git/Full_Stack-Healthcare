@@ -284,6 +284,22 @@ export const DataProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setPatients((prev) => [created, ...prev]);
 
       if (created.doctorId) {
+        const updatedQueue = reorderDoctorQueue(created.doctorId, created);
+        const queueMap = new Map(updatedQueue.map((p) => [p.id, p]));
+
+        setPatients((prev) =>
+          prev.map((p) => queueMap.get(p.id) ?? p)
+        );
+
+        await Promise.all(
+          updatedQueue.map(async (queuePatient) => {
+            const existing = patients.find((p) => p.id === queuePatient.id);
+            if (!existing || existing.token !== queuePatient.token || existing.bookingDate !== queuePatient.bookingDate || existing.bookingTime !== queuePatient.bookingTime) {
+              await savePatient(queuePatient);
+            }
+          })
+        );
+
         setDoctors((prev) =>
           prev.map((d) =>
             d.id === created.doctorId ? { ...d, status: 'Busy', updatedAt: now } : d
