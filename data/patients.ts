@@ -52,6 +52,23 @@ const saveLocalPatients = (patients: Patient[]) => {
   localStorage.setItem(LOCAL_STORAGE_PATIENTS_KEY, JSON.stringify(patients));
 };
 
+const mergePatients = (serverPatients: Patient[]): Patient[] => {
+  const localPatients = readLocalPatients();
+  const mergedMap = new Map<number, Patient>();
+
+  localPatients.forEach((patient) => mergedMap.set(patient.id, patient));
+  serverPatients.forEach((patient) => mergedMap.set(patient.id, patient));
+
+  const merged = Array.from(mergedMap.values()).sort((a, b) => {
+    const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return bTime - aTime;
+  });
+
+  saveLocalPatients(merged);
+  return merged;
+};
+
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const contentType = res.headers.get('content-type') || '';
@@ -72,7 +89,14 @@ async function handleResponse<T>(res: Response): Promise<T> {
 export async function getPatients(): Promise<Patient[]> {
   try {
     const res = await fetch(API_BASE, { cache: 'no-store' });
-    return handleResponse<Patient[]>(res);
+    const serverPatients = await handleResponse<Patient[]>(res);
+    if (serverPatients.length === 0) {
+      const localPatients = readLocalPatients();
+      if (localPatients.length > 0) {
+        return localPatients;
+      }
+    }
+    return mergePatients(serverPatients);
   } catch (error) {
     console.warn('API not available for patients, falling back to localStorage:', error);
     return readLocalPatients();
@@ -89,7 +113,10 @@ export async function createPatient(patient: NewPatient): Promise<Patient> {
       body: JSON.stringify(patient),
     });
     const payload = await handleResponse<{ message: string; data: Patient }>(res);
-    return payload.data;
+    const created = payload.data;
+    const existing = readLocalPatients();
+    saveLocalPatients([created, ...existing.filter((item) => item.id !== created.id)]);
+    return created;
   } catch (error) {
     console.warn('API not available for creating patient, falling back to localStorage:', error);
 
@@ -130,7 +157,10 @@ export async function updatePatient(patientId: number, patient: Partial<Patient>
       body: JSON.stringify(patient),
     });
     const payload = await handleResponse<{ message: string; data: Patient }>(res);
-    return payload.data;
+    const updated = payload.data;
+    const stored = readLocalPatients();
+    saveLocalPatients(stored.map((item) => (item.id === updated.id ? updated : item)));
+    return updated;
   } catch (error) {
     console.warn('API not available for updating patient, falling back to localStorage:', error);
     const stored = readLocalPatients();
@@ -148,6 +178,8 @@ export async function deletePatient(patientId: number): Promise<void> {
       method: 'DELETE',
     });
     await handleResponse<{ message: string; data: Patient }>(res);
+    const stored = readLocalPatients();
+    saveLocalPatients(stored.filter((item) => item.id !== patientId));
   } catch (error) {
     console.warn('API not available for deleting patient, falling back to localStorage:', error);
     const stored = readLocalPatients();
